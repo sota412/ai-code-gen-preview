@@ -1,4 +1,5 @@
 // DOM要素
+const aiProviderSelect = document.getElementById('aiProvider');
 const apiKeyInput = document.getElementById('apiKey');
 const promptInput = document.getElementById('prompt');
 const codeTypeSelect = document.getElementById('codeType');
@@ -10,6 +11,9 @@ const codeOutput = document.getElementById('codeOutput');
 const previewFrame = document.getElementById('previewFrame');
 const previewError = document.getElementById('previewError');
 const loadingSpinner = document.getElementById('loadingSpinner');
+const apiKeyHint = document.getElementById('apiKeyHint');
+const apiLinkGemini = document.getElementById('apiLinkGemini');
+const apiLinkOpenAI = document.getElementById('apiLinkOpenAI');
 
 // ローカルストレージキー
 const STORAGE_KEY = 'aiCodeGeneratorState';
@@ -18,6 +22,7 @@ const STORAGE_KEY = 'aiCodeGeneratorState';
 function init() {
     loadFromStorage();
     setupEventListeners();
+    updateAPILinkVisibility();
 }
 
 // イベントリスナー設定
@@ -26,9 +31,26 @@ function setupEventListeners() {
     copyBtn.addEventListener('click', copyCode);
     downloadBtn.addEventListener('click', downloadCode);
     refreshPreviewBtn.addEventListener('click', updatePreview);
-    
-    // コード出力が変わったら自動的にプレビューを更新
+    aiProviderSelect.addEventListener('change', updateAPILinkVisibility);
     codeOutput.addEventListener('change', updatePreview);
+}
+
+// APIプロバイダ切り替えに伴うUIの更新
+function updateAPILinkVisibility() {
+    const provider = aiProviderSelect.value;
+    const isGemini = provider === 'gemini';
+    
+    if (isGemini) {
+        apiKeyHint.textContent = 'Gemini API Key は安全にブラウザに保存されます';
+        apiLinkGemini.style.display = 'block';
+        apiLinkOpenAI.style.display = 'none';
+        apiKeyInput.placeholder = 'gemini-...';
+    } else {
+        apiKeyHint.textContent = 'OpenAI API Key は安全にブラウザに保存されます';
+        apiLinkGemini.style.display = 'none';
+        apiLinkOpenAI.style.display = 'block';
+        apiKeyInput.placeholder = 'sk-...';
+    }
 }
 
 // ストレージから復元
@@ -38,6 +60,7 @@ function loadFromStorage() {
         const state = JSON.parse(saved);
         promptInput.value = state.prompt || '';
         codeTypeSelect.value = state.codeType || 'html-css-js';
+        aiProviderSelect.value = state.aiProvider || 'gemini';
         if (state.apiKey) {
             apiKeyInput.value = state.apiKey;
         }
@@ -49,7 +72,8 @@ function saveToStorage() {
     const state = {
         prompt: promptInput.value,
         codeType: codeTypeSelect.value,
-        apiKey: apiKeyInput.value
+        apiKey: apiKeyInput.value,
+        aiProvider: aiProviderSelect.value
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
@@ -59,6 +83,7 @@ async function generateCode() {
     const apiKey = apiKeyInput.value.trim();
     const prompt = promptInput.value.trim();
     const codeType = codeTypeSelect.value;
+    const aiProvider = aiProviderSelect.value;
 
     // バリデーション
     if (!apiKey) {
@@ -76,7 +101,12 @@ async function generateCode() {
     saveToStorage();
 
     try {
-        const code = await callOpenAIAPI(apiKey, prompt, codeType);
+        let code;
+        if (aiProvider === 'gemini') {
+            code = await callGeminiAPI(apiKey, prompt, codeType);
+        } else {
+            code = await callOpenAIAPI(apiKey, prompt, codeType);
+        }
         displayCode(code);
         updatePreview();
     } catch (error) {
@@ -85,6 +115,46 @@ async function generateCode() {
     } finally {
         showLoading(false);
     }
+}
+
+// Google Gemini API呼び出し
+async function callGeminiAPI(apiKey, prompt, codeType) {
+    const systemPrompt = getSystemPrompt(codeType);
+    const userPrompt = `${prompt}\n\n完全に機能するコードを生成してください。HTMLの場合は<html>から</html>までの完全な構造を含めてください。`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [
+                    {
+                        text: systemPrompt + '\n\n' + userPrompt
+                    }
+                ]
+            }],
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2000,
+            }
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        const errorMessage = error.error?.message || 'Gemini API呼び出しに失敗しました';
+        throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        throw new Error('API が無効な応答を返しました');
+    }
+
+    return data.candidates[0].content.parts[0].text;
 }
 
 // OpenAI API呼び出し
@@ -111,7 +181,7 @@ async function callOpenAIAPI(apiKey, prompt, codeType) {
 
     if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error?.message || 'API呼び出しに失敗しました');
+        throw new Error(error.error?.message || 'OpenAI API呼び出しに失敗しました');
     }
 
     const data = await response.json();
@@ -121,9 +191,32 @@ async function callOpenAIAPI(apiKey, prompt, codeType) {
 // システムプロンプトの取得
 function getSystemPrompt(codeType) {
     const prompts = {
-        'html-css-js': `あなたは優秀なフロントエンド開発者です。ユーザーのリクエストに基づいて、完全に機能するHTML/CSS/JavaScriptコードを生成してください。\n\n以下のルールに従ってください：\n1. 完全なHTMLドキュメント構造を含める（<!DOCTYPE html>から始まる）\n2. CSSはHTMLの<style>タグ内に含める\n3. JavaScriptはHTMLの<script>タグ内に含める\n4. モダンで見栄えの良いデザインを心がける\n5. レスポンシブデザインを考慮する\n6. アクセシビリティを考慮する\n7. コードには適切なコメントを付ける\n8. 外部ライブラリは必要な場合のみ使用する`,
-        'react': `あなたは優秀なReact開発者です。ユーザーのリクエストに基づいて、機能するReactコンポーネントを生成してください。\n\nルール：\n1. JSX構文を使用\n2. 必要に応じてhooksを使用\n3. CSSはコンポーネント内に含める\n4. 完全で実行可能なコードを生成\n5. PropTypesまたはTypeScriptの型定義を含める`,
-        'vue': `あなたは優秀なVue開発者です。ユーザーのリクエストに基づいて、機能するVueコンポーネントを生成してください。\n\nルール：\n1. Vue 3の<script setup>構文を使用\n2. テンプレートとスタイルを含める\n3. リアクティビティを適切に使用\n4. 完全で実行可能なコードを生成`
+        'html-css-js': `あなたは優秀なフロントエンド開発者です。ユーザーのリクエストに基づいて、完全に機能するHTML/CSS/JavaScriptコードを生成してください。
+
+以下のルールに従ってください：
+1. 完全なHTMLドキュメント構造を含める（<!DOCTYPE html>から始まる）
+2. CSSはHTMLの<style>タグ内に含める
+3. JavaScriptはHTMLの<script>タグ内に含める
+4. モダンで見栄えの良いデザインを心がける
+5. レスポンシブデザインを考慮する
+6. アクセシビリティを考慮する
+7. コードには適切なコメントを付ける
+8. 外部ライブラリは必要な場合のみ使用する`,
+        'react': `あなたは優秀なReact開発者です。ユーザーのリクエストに基づいて、機能するReactコンポーネントを生成してください。
+
+ルール：
+1. JSX構文を使用
+2. 必要に応じてhooksを使用
+3. CSSはコンポーネント内に含める
+4. 完全で実行可能なコードを生成
+5. PropTypesまたはTypeScriptの型定義を含める`,
+        'vue': `あなたは優秀なVue開発者です。ユーザーのリクエストに基づいて、機能するVueコンポーネントを生成してください。
+
+ルール：
+1. Vue 3の<script setup>構文を使用
+2. テンプレートとスタイルを含める
+3. リアクティビティを適切に使用
+4. 完全で実行可能なコードを生成`
     };
 
     return prompts[codeType] || prompts['html-css-js'];
@@ -139,7 +232,7 @@ function displayCode(code) {
 // マークダウンのコードブロックを抽出
 function extractCodeBlock(text) {
     // ```で囲まれたコードブロックを探す
-    const match = text.match(/```(?:html|jsx|vue)?\n?([\s\S]*?)```/m);
+    const match = text.match(/```(?:html|jsx|vue|javascript|js)?\n?([\s\S]*?)```/m);
     if (match) {
         return match[1].trim();
     }
@@ -165,7 +258,7 @@ function updatePreview() {
     clearError();
 
     if (!code || code === '// コードがここに表示されます') {
-        previewFrame.srcdoc = '<p>コードを生成してください</p>';
+        previewFrame.srcdoc = '<p style="padding: 2rem; color: #999;">コードを生成してください</p>';
         return;
     }
 
@@ -173,10 +266,10 @@ function updatePreview() {
         // HTMLコードをiframeに設定
         if (code.includes('<!DOCTYPE') || code.includes('<html')) {
             previewFrame.srcdoc = code;
-        } else if (code.includes('import React') || code.includes('function')) {
+        } else if (code.includes('import React') || code.includes('export') || (code.includes('function') && code.includes('return'))) {
             // ReactやVueコンポーネントの場合は警告を表示
-            showError('Reactコンポーネントはプレビューできません。本プロジェクトで確認してください。');
-            previewFrame.srcdoc = '<p>Reactコンポーネントはこのプレビューウィンドウでは表示できません。</p>';
+            showError('ReactやVueコンポーネントはこのプレビューでは表示できません。');
+            previewFrame.srcdoc = '<p style="padding: 2rem; color: #666;">React/Vueコンポーネントはこのプレビューウィンドウでは表示できません。生成されたコードを参照してください。</p>';
         } else {
             // HTMLラッパーで囲む
             const wrapped = `<!DOCTYPE html>
@@ -185,7 +278,7 @@ function updatePreview() {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; }
     </style>
 </head>
 <body>
