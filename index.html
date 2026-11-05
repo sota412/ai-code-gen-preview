@@ -1,125 +1,285 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Code Generator - リアルタイムプレビュー</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container">
-        <header class="header">
-            <h1>🤖 AI Code Generator</h1>
-            <p class="subtitle">AIがあなたのアイデアをコードに変える</p>
-        </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="龍ケ崎市長山の蛇沼公園PRサイト。自然の癒しと四季の彩りに満ちた、心を整える癒しスポットを紹介します。"
+    />
+    <title>蛇沼公園 | 龍ケ崎市長山の自然の宝石</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-noise"></div>
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a class="brand" href="#top" aria-label="蛇沼公園ホーム">
+          <span class="brand-mark">蛇</span>
+          <span>蛇沼公園</span>
+        </a>
 
-        <div class="main-content">
-            <!-- 左パネル: 入力エリア -->
-            <div class="panel input-panel">
-                <div class="panel-header">
-                    <h2>📝 プロンプト入力</h2>
-                </div>
-                <div class="panel-body">
-                    <div class="form-group">
-                        <label for="aiProvider">AI プロバイダ</label>
-                        <select id="aiProvider" class="select-field">
-                            <option value="gemini">✨ Google Gemini (無料)</option>
-                            <option value="openai">🔑 OpenAI GPT-4</option>
-                        </select>
-                    </div>
+        <nav class="main-nav" aria-label="メインメニュー">
+          <a href="#about">公園紹介</a>
+          <a href="#features">魅力</a>
+          <a href="#seasons">四季</a>
+          <a href="#access">アクセス</a>
+        </nav>
 
-                    <div class="form-group">
-                        <label for="apiKey">API Key</label>
-                        <input 
-                            type="password" 
-                            id="apiKey" 
-                            placeholder="gemini-... または sk-..." 
-                            class="input-field"
-                        >
-                        <small id="apiKeyHint">API Key は安全にブラウザに保存されます</small>
-                    </div>
+        <a class="nav-cta" href="#visit">今すぐ行く</a>
+      </div>
+    </header>
 
-                    <div class="form-group">
-                        <label for="apiKeyLink">APIキーの取得方法</label>
-                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                            <p id="apiLinkGemini">
-                                🔗 <a href="https://ai.google.dev/tutorials/setup" target="_blank" style="color: #818cf8;">Google AI Studio で無料キーを取得</a>
-                            </p>
-                            <p id="apiLinkOpenAI" style="display: none;">
-                                🔗 <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #818cf8;">OpenAI Platform でキーを取得</a>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="prompt">何を作りたいですか？</label>
-                        <textarea 
-                            id="prompt" 
-                            class="textarea-field" 
-                            placeholder="例: 青と白のグラデーション背景にボタンがあるシンプルなランディングページを作成してください。ボタンをクリックするとアラートが表示されるようにしてください。"
-                            rows="8"
-                        ></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="codeType">コードタイプ</label>
-                        <select id="codeType" class="select-field">
-                            <option value="html-css-js">HTML + CSS + JavaScript</option>
-                            <option value="react">React Component</option>
-                            <option value="vue">Vue Component</option>
-                        </select>
-                    </div>
-
-                    <button id="generateBtn" class="button button-primary">
-                        ✨ コード生成
-                    </button>
-                </div>
-            </div>
-
-            <!-- 中央パネル: コード表示 -->
-            <div class="panel code-panel">
-                <div class="panel-header">
-                    <h2>💻 生成されたコード</h2>
-                    <div class="code-actions">
-                        <button id="copyBtn" class="button button-small" title="コピー">
-                            📋 コピー
-                        </button>
-                        <button id="downloadBtn" class="button button-small" title="ダウンロード">
-                            ⬇️ DL
-                        </button>
-                    </div>
-                </div>
-                <div class="panel-body">
-                    <div id="codeOutput" class="code-output">
-                        <pre><code>// コードがここに表示されます</code></pre>
-                    </div>
-                    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
-                        <div class="spinner"></div>
-                        <p>AIが考え中...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 右パネル: プレビュー -->
-            <div class="panel preview-panel">
-                <div class="panel-header">
-                    <h2>👁️ リアルタイムプレビュー</h2>
-                    <button id="refreshPreviewBtn" class="button button-small" title="更新">
-                        🔄 更新
-                    </button>
-                </div>
-                <div class="panel-body">
-                    <div id="previewError" class="error-message" style="display: none;"></div>
-                    <iframe 
-                        id="previewFrame" 
-                        class="preview-frame"
-                        sandbox="allow-scripts allow-same-origin"
-                    ></iframe>
-                </div>
-            </div>
+    <main id="top">
+      <section class="hero section">
+        <div class="hero-visual" aria-hidden="true">
+          <div class="orb orb-one"></div>
+          <div class="orb orb-two"></div>
+          <div class="orb orb-three"></div>
+          <div class="mist mist-one"></div>
+          <div class="mist mist-two"></div>
         </div>
-    </div>
+
+        <div class="container hero-inner">
+          <div class="hero-copy reveal">
+            <p class="eyebrow">龍ケ崎市長山・蛇沼公園</p>
+            <h1>自然が、心を静かにほどく場所。</h1>
+            <p class="lead">
+              風の音、湖面の揺らぎ、四季の景色が織りなす蛇沼公園。<br />
+              ひとときの余白を、あなたに。
+            </p>
+
+            <div class="cta-row">
+              <a class="primary-btn" href="#visit">行く計画を立てる</a>
+              <a class="secondary-btn" href="#about">公園を知る</a>
+            </div>
+
+            <ul class="hero-meta" aria-label="蛇沼公園の概要">
+              <li><strong>4つの季節</strong><span>変わる景観</span></li>
+              <li><strong>癒し</strong><span>自然と静けさ</span></li>
+              <li><strong>散策</strong><span>気分転換に最適</span></li>
+            </ul>
+          </div>
+
+          <div class="hero-card reveal">
+            <div class="card-photo" aria-label="蛇沼公園イメージ"></div>
+            <div class="card-badges">
+              <span>桜</span>
+              <span>新緑</span>
+              <span>紅葉</span>
+              <span>冬景色</span>
+            </div>
+            <div class="mini-stats">
+              <div>
+                <strong>360°</strong>
+                <span>自然の景色</span>
+              </div>
+              <div>
+                <strong>∞</strong>
+                <span>気分のリセット</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="about" class="story section">
+        <div class="container">
+          <div class="section-heading reveal">
+            <p class="eyebrow accent">公園紹介</p>
+            <h2>静かな水辺と森の中に、やさしい時間がある。</h2>
+          </div>
+
+          <div class="story-layout">
+            <div class="story-copy reveal">
+              <p>
+                蛇沼公園は、龍ケ崎市長山に位置する大自然の中にひっそりと佇む、都会の喧騒を離れた憩いの場。
+                木々に囲まれた水辺と、広がる緑の景色は、季節ごとに異なる表情を見せます。
+              </p>
+              <p>
+                散歩、写真撮影、家族での休憩、心を整えるひととき――
+                蛇沼公園は「ただの公園」ではなく、自然の時間に身を委ねる場所です。
+              </p>
+              <div class="story-points">
+                <div>
+                  <span class="point-icon">✓</span>
+                  <span>散策に最適な静かな環境</span>
+                </div>
+                <div>
+                  <span class="point-icon">✓</span>
+                  <span>季節ごとの景観が変化</span>
+                </div>
+                <div>
+                  <span class="point-icon">✓</span>
+                  <span>心と体を癒す時間を提供</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="story-visual reveal">
+              <div class="visual-card large"></div>
+              <div class="visual-card small"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="features section">
+        <div class="container">
+          <div class="section-heading reveal">
+            <p class="eyebrow accent">蛇沼公園の魅力</p>
+            <h2>自然の気配を感じて、心がほどける</h2>
+          </div>
+
+          <div class="feature-grid">
+            <article class="feature-card reveal">
+              <div class="feature-icon">🌊</div>
+              <h3>水辺の静けさ</h3>
+              <p>
+                湖面の揺らぎと風の音が、日常の雑音を柔らかくしてくれます。
+              </p>
+            </article>
+
+            <article class="feature-card reveal">
+              <div class="feature-icon">🌿</div>
+              <h3>四季の表情</h3>
+              <p>
+                春の新緑から夏の深緑、秋の紅葉、冬の静かな景色まで、季節ごとに違う美しさを堪能できます。
+              </p>
+            </article>
+
+            <article class="feature-card reveal">
+              <div class="feature-icon">📷</div>
+              <h3>写真スポット</h3>
+              <p>
+                光の変化と自然の色が、いつも心に残る一枚を生み出します。
+              </p>
+            </article>
+
+            <article class="feature-card reveal">
+              <div class="feature-icon">🚶</div>
+              <h3>散策にぴったり</h3>
+              <p>
+                気分転換に最適な景観と、歩くほどに気持ちが整っていく空間です。
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="seasons" class="timeline section alt">
+        <div class="container">
+          <div class="section-heading reveal">
+            <p class="eyebrow accent">四季のおすすめ</p>
+            <h2>いつ訪れても、いい時間が待っている。</h2>
+          </div>
+
+          <div class="season-list">
+            <article class="season-item reveal">
+              <div class="season-image spring"></div>
+              <div class="season-body">
+                <span class="season-tag">SPRING</span>
+                <h3>新緑とやさしい風</h3>
+                <p>
+                  春の公園は、木々の芽吹きと穏やかな空気に満ちていて、散歩の気分に最適です。
+                </p>
+              </div>
+            </article>
+
+            <article class="season-item reveal">
+              <div class="season-image summer"></div>
+              <div class="season-body">
+                <span class="season-tag">SUMMER</span>
+                <h3>深い緑の中で息を落とす</h3>
+                <p>
+                  夏は木陰の涼しさと水辺の風が心地よく、くつろぐ時間が増えていきます。
+                </p>
+              </div>
+            </article>
+
+            <article class="season-item reveal">
+              <div class="season-image autumn"></div>
+              <div class="season-body">
+                <span class="season-tag">AUTUMN</span>
+                <h3>紅葉の柔らかな輝き</h3>
+                <p>
+                  秋の公園は、鮮やかな色合いが景色に深みを与え、思わず立ち止まる瞬間が訪れます。
+                </p>
+              </div>
+            </article>
+
+            <article class="season-item reveal">
+              <div class="season-image winter"></div>
+              <div class="season-body">
+                <span class="season-tag">WINTER</span>
+                <h3>静寂と澄んだ空気</h3>
+                <p>
+                  冬は景色が静かになり、自然の音がより鮮明に聞こえる季節。心を落ち着けるのに最適です。
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="gallery section">
+        <div class="container">
+          <div class="section-heading reveal">
+            <p class="eyebrow accent">感動の景色</p>
+            <h2>蛇沼公園ならではの風景で、思い出をつくる。</h2>
+          </div>
+
+          <div class="gallery-grid">
+            <div class="gallery-item tall reveal"></div>
+            <div class="gallery-item reveal"></div>
+            <div class="gallery-item reveal"></div>
+            <div class="gallery-item wide reveal"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="visit" class="visit section alt">
+        <div class="container visit-wrap reveal">
+          <div class="visit-copy">
+            <p class="eyebrow accent">アクセス</p>
+            <h2>今日の気分に合わせて、自然の時間を選ぶ。</h2>
+            <p>
+              龍ケ崎市長山にある蛇沼公園は、日常をリセットしたいときにぴったりの場所です。
+              近くに足を運ぶだけで、気持ちがやわらぎます。
+            </p>
+          </div>
+
+          <div class="visit-card">
+            <div class="info-row">
+              <span class="label">所在地</span>
+              <strong>茨城県龍ケ崎市長山</strong>
+            </div>
+            <div class="info-row">
+              <span class="label">おすすめ時間</span>
+              <strong>朝の静かな時間 / 夕方の景色</strong>
+            </div>
+            <div class="info-row">
+              <span class="label">体験のしやすさ</span>
+              <strong>散歩・写真・休憩・リフレッシュ</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-wrap">
+        <p>© <span id="year"></span> 蛇沼公園</p>
+        <a href="#top">ページ上部へ</a>
+      </div>
+    </footer>
 
     <script src="script.js"></script>
-</body>
+  </body>
 </html>
